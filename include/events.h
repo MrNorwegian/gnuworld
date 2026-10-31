@@ -59,6 +59,7 @@ enum {
     EVT_XREPLY,
     EVT_NETCONF,
     EVT_REMNETCONF,
+    EVT_RAW_OUT,
 
     // EVT_NOOP must always be last
     EVT_NOOP
@@ -103,6 +104,10 @@ typedef int channelEventType;
  *  1) iServer* - server being squit
  *  2) string* - source
  *  3) string* - reason
+ * EVT_RAW_OUT
+ *  1) const std::string* - a line written to the uplink, without line ending.
+ *     Posted from xServer::writeLine(), so a listener that writes from inside
+ *     its handler will be called again for its own output.
  * EVT_BURST_ACK
  *  1) iServer*
  * EVT_NICK

@@ -286,6 +286,7 @@ build_modscanner=false
 build_modstats=false
 build_modsnoop=false
 build_moddebug=false
+build_modspybot=false
 
 NEW_MODS=""
 MOD_DIRS=""
@@ -335,6 +336,7 @@ for moduleName in $MOD_DIRS; do
     mod.stats)		build_modstats=true;;
     mod.snoop)		build_modsnoop=true;;
     mod.debug)		build_moddebug=true;;
+    mod.spybot)		build_modspybot=true;;
     *)			NEW_MODS="$NEW_MODS $moduleName";;
   esac
 done
@@ -352,6 +354,7 @@ AM_CONDITIONAL(COND_MODSCANNER,[test $build_modscanner = true])
 AM_CONDITIONAL(COND_MODSTATS,[test $build_modstats = true])
 AM_CONDITIONAL(COND_MODSNOOP,[test $build_modsnoop = true])
 AM_CONDITIONAL(COND_MODDEBUG,[test $build_moddebug = true])
+AM_CONDITIONAL(COND_MODSPYBOT,[test $build_modspybot = true])
 
 dnl PostgreSQL is required by default. Skip checks only when every enabled
 dnl module is in the list below and no unknown/custom modules are built.
@@ -359,7 +362,7 @@ check_pgsql=yes
 needs_pgsql=no
 for moduleName in $MOD_DIRS; do
   case "$moduleName" in
-    mod.chanfix|mod.clientExample|mod.cloner|mod.debug|mod.gnutest|mod.scanner|mod.stats|mod.snoop)
+    mod.chanfix|mod.clientExample|mod.cloner|mod.debug|mod.gnutest|mod.scanner|mod.stats|mod.snoop|mod.spybot)
       ;;
     *)
       needs_pgsql=yes

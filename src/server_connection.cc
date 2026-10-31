@@ -299,6 +299,12 @@ bool xServer::writeLine(std::string_view text, bool duringBurst) {
         clog << "[OUT]: " << text << endl;
     }
 
+    // Let listeners see every line sent to the uplink, including held ones
+    if (!eventList[EVT_RAW_OUT].empty()) {
+        std::string out(text);
+        PostEvent(EVT_RAW_OUT, static_cast<void*>(&out));
+    }
+
     std::string line(text);
     line += '\n';
 

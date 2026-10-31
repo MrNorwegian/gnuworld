@@ -67,6 +67,7 @@ EXTRA_DIST = bin/logging.properties \
 	bin/scanner.example.conf \
 	bin/stats.example.conf \
 	bin/debug.example.conf \
+	bin/spybot.example.conf \
 	contrib/00INDEX.TXT \
 	contrib/chktrans.py \
 	contrib/encrypt.sh \
@@ -228,6 +229,10 @@ endif
 
 if COND_MODDEBUG
 include $(srcdir)/mod.debug/Makefile.am
+endif
+
+if COND_MODSPYBOT
+include $(srcdir)/mod.spybot/Makefile.am
 endif
 
 if COND_TESTDIR

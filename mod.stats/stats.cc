@@ -153,6 +153,7 @@ void stats::OnAttach() {
     for (eventType whichEvent = 0; whichEvent != EVT_NOOP; ++whichEvent) {
         switch (whichEvent) {
         case EVT_RAW:
+        case EVT_RAW_OUT:
             break;
         default:
             MyUplink->RegisterEvent(whichEvent, this);
