@@ -69,6 +69,12 @@ spybot::spybot(const string& configFileName)
         }
     }
     useColours = (string_lower(conf.TryRequire<string>("colours", string("yes"))) != "no");
+    colNick = parseColour(conf.TryRequire<string>("colour_nick", string("07")), "07");
+    colUserHost = parseColour(conf.TryRequire<string>("colour_userhost", string("07")), "07");
+    colIp = parseColour(conf.TryRequire<string>("colour_ip", string("14")), "14");
+    colChannel = parseColour(conf.TryRequire<string>("colour_channel", string("11")), "11");
+    colServer = parseColour(conf.TryRequire<string>("colour_server", string("08")), "08");
+    colModes = parseColour(conf.TryRequire<string>("colour_modes", string("09")), "09");
     loadIgnores();
 }
 
@@ -144,8 +150,33 @@ void spybot::OnEvent(const eventType& whichEvent, void* arg1, void* arg2, void* 
     xClient::OnEvent(whichEvent, arg1, arg2, arg3, arg4);
 }
 
-string spybot::colour(const char* code, const string& text) const {
-    return useColours ? string("\003") + code + text + "\003" : text;
+string spybot::colour(const string& code, const string& text) const {
+    return (useColours && !code.empty()) ? string("\003") + code + text + "\003" : text;
+}
+
+string spybot::parseColour(const string& value, const string& fallback) {
+    const string v = string_lower(value);
+    if (v.empty() || "none" == v || "off" == v || "no" == v || "''" == v) {
+        return string();
+    }
+
+    StringTokenizer st(v, ',');
+    if (st.empty() || st.size() > 2) {
+        return fallback;
+    }
+
+    string out;
+    for (StringTokenizer::size_type i = 0; i < st.size(); ++i) {
+        const string& n = st[i];
+        if (n.empty() || n.size() > 2 || string::npos != n.find_first_not_of("0123456789")) {
+            return fallback;
+        }
+        if (i) {
+            out += ',';
+        }
+        out += (1 == n.size()) ? "0" + n : n;
+    }
+    return out;
 }
 
 void spybot::report(const string& text) {
@@ -209,14 +240,14 @@ string spybot::serverNameOf(const iClient* theClient) const {
 string spybot::describeClient(const iClient* theClient) const {
     const string& host = theClient->getRealInsecureHost().empty() ? theClient->getInsecureHost()
                                                                   : theClient->getRealInsecureHost();
-    return "User " + orange(theClient->getNickName() + " (" + theClient->getUserName() + "@" + host + ")") +
-           " [" + xIP(theClient->getIP()).GetNumericIP() + "]";
+    return "User " + cNick(theClient->getNickName()) + " (" + cUserHost(theClient->getUserName() + "@" + host) +
+           ") [" + cIp(xIP(theClient->getIP()).GetNumericIP()) + "]";
 }
 
 string spybot::describeSource(const string& numeric) const {
     if (2 == numeric.size()) {
         iServer* theServer = Network->findServer(numeric);
-        return "Server " + yellow(theServer ? theServer->getName() : numeric);
+        return "Server " + cServer(theServer ? theServer->getName() : numeric);
     }
     iClient* theClient = Network->findClient(numeric);
     return theClient ? describeClient(theClient) : "Unknown " + numeric;
@@ -278,8 +309,8 @@ void spybot::handleConnect(iClient* theClient) {
         return;
     }
 
-    report(describeClient(theClient) + " * " + theClient->getDescription() + " Connected to " +
-           yellow("[" + serverNameOf(theClient) + "]"));
+    report(describeClient(theClient) + " * " + theClient->getDescription() + " Connected to [" +
+           cServer(serverNameOf(theClient)) + "]");
 }
 
 void spybot::handleQuit(iClient* theClient, const string* reason) {
@@ -288,8 +319,8 @@ void spybot::handleQuit(iClient* theClient, const string* reason) {
         return;
     }
 
-    report(describeClient(theClient) + " * " + theClient->getDescription() + " Disconnected from " +
-           yellow("[" + serverNameOf(theClient) + "]") + " With reason: " + *reason);
+    report(describeClient(theClient) + " * " + theClient->getDescription() + " Disconnected from [" +
+           cServer(serverNameOf(theClient)) + "] With reason: " + *reason);
 }
 
 void spybot::handleKill(void* source, iClient* target, const string* reason) {
@@ -305,7 +336,7 @@ void spybot::handleKill(void* source, iClient* target, const string* reason) {
         who = describeClient(srcClient);
         srcIgnored = isClientIgnored(srcClient);
     } else if (iServer* srcServer = dynamic_cast<iServer*>(src)) {
-        who = "Server " + yellow(srcServer->getName());
+        who = "Server " + cServer(srcServer->getName());
         srcIgnored = isServerIgnored(srcServer->getName());
     }
 
@@ -321,8 +352,8 @@ void spybot::handleNickChange(iClient* theClient, const string* oldNick) {
         return;
     }
 
-    report(describeClient(theClient) + " changed nick: " + (oldNick ? *oldNick : string("?")) + " -> " +
-           theClient->getNickName());
+    report(describeClient(theClient) + " changed nick: " + cNick(oldNick ? *oldNick : string("?")) + " -> " +
+           cNick(theClient->getNickName()));
 }
 
 void spybot::handleServerLink(iServer* theServer, iServer* uplink) {
@@ -336,8 +367,8 @@ void spybot::handleServerLink(iServer* theServer, iServer* uplink) {
         return;
     }
 
-    report("Server " + yellow(theServer->getName()) + " linked to " +
-           yellow(uplink ? uplink->getName() : string("?")) + " (" + theServer->getDescription() + ")");
+    report("Server " + cServer(theServer->getName()) + " linked to " +
+           cServer(uplink ? uplink->getName() : string("?")) + " (" + theServer->getDescription() + ")");
 }
 
 void spybot::handleServerSplit(iServer* theServer, const string* reason) {
@@ -346,8 +377,8 @@ void spybot::handleServerSplit(iServer* theServer, const string* reason) {
     }
 
     iServer* uplink = Network->findServer(theServer->getUplinkIntYY());
-    report("Server " + yellow(theServer->getName()) + " split from " +
-           yellow(uplink ? uplink->getName() : string("?")) + " (" + (reason ? *reason : string()) + ")");
+    report("Server " + cServer(theServer->getName()) + " split from " +
+           cServer(uplink ? uplink->getName() : string("?")) + " (" + (reason ? *reason : string()) + ")");
 }
 
 void spybot::handleGline(Gline* theGline, bool added) {
@@ -361,7 +392,7 @@ void spybot::handleGline(Gline* theGline, bool added) {
         if (isServerIgnored(theServer->getName())) {
             return;
         }
-        who = "Server " + yellow(theServer->getName());
+        who = "Server " + cServer(theServer->getName());
     } else if (iClient* theClient = Network->findNick(setBy)) {
         if (isClientIgnored(theClient)) {
             return;
@@ -447,7 +478,7 @@ void spybot::rawJoin(const string& src, const StringTokenizer& st, bool create) 
     StringTokenizer chans(st[2], ',');
     for (StringTokenizer::size_type i = 0; i < chans.size(); ++i) {
         if (!isChannelIgnored(chans[i])) {
-            report(who + (create ? " creates " : " joins ") + chans[i]);
+            report(who + (create ? " creates " : " joins ") + cChan(chans[i]));
         }
     }
 }
@@ -462,7 +493,7 @@ void spybot::rawPart(const string& src, const StringTokenizer& st) {
     StringTokenizer chans(st[2], ',');
     for (StringTokenizer::size_type i = 0; i < chans.size(); ++i) {
         if (!isChannelIgnored(chans[i])) {
-            report(who + " parts " + chans[i] + (reason.empty() ? string() : " (" + reason + ")"));
+            report(who + " parts " + cChan(chans[i]) + (reason.empty() ? string() : " (" + reason + ")"));
         }
     }
 }
@@ -472,7 +503,7 @@ void spybot::rawKick(const string& src, const StringTokenizer& st) {
         return;
     }
 
-    report(describeSource(src) + " kicked " + describeSource(st[3]) + " from " + st[2] + " (" + tail(st, 4) +
+    report(describeSource(src) + " kicked " + describeSource(st[3]) + " from " + cChan(st[2]) + " (" + tail(st, 4) +
            ")");
 }
 
@@ -490,7 +521,71 @@ void spybot::rawTopic(const string& src, const StringTokenizer& st) {
         }
     }
 
-    report(describeSource(src) + " sets topic on " + st[2] + ": " + topic);
+    report(describeSource(src) + " sets topic on " + cChan(st[2]) + ": " + topic);
+}
+
+string spybot::userModeSummary(const iClient* theClient) const {
+    static const struct {
+        iClient::modeType bit;
+        char letter;
+    } userModes[] = {
+        {iClient::MODE_OPER, 'o'},        {iClient::MODE_WALLOPS, 'w'},   {iClient::MODE_INVISIBLE, 'i'},
+        {iClient::MODE_DEAF, 'd'},        {iClient::MODE_SERVICES, 'k'},  {iClient::MODE_REGISTERED, 'r'},
+        {iClient::MODE_HIDDEN_HOST, 'x'}, {iClient::MODE_G, 'g'},         {iClient::MODE_SERVNOTICES, 's'},
+        {iClient::MODE_TLS, 'z'},
+    };
+
+    string letters;
+    for (const auto& m : userModes) {
+        if (theClient->getMode(m.bit)) {
+            letters += m.letter;
+        }
+    }
+    return letters.empty() ? string("none") : "+" + letters;
+}
+
+// Key and limit are shown; the A/U passes are only listed as letters
+string spybot::channelModeSummary(const string& channelName) const {
+    const Channel* theChan = Network->findChannel(channelName);
+    if (!theChan) {
+        return string();
+    }
+
+    static const struct {
+        Channel::modeType bit;
+        char letter;
+    } chanModes[] = {
+        {Channel::MODE_TOPICLIMIT, 't'}, {Channel::MODE_NOPRIVMSGS, 'n'},   {Channel::MODE_SECRET, 's'},
+        {Channel::MODE_PRIVATE, 'p'},    {Channel::MODE_MODERATED, 'm'},    {Channel::MODE_INVITEONLY, 'i'},
+        {Channel::MODE_REGONLY, 'r'},    {Channel::MODE_REGISTERED, 'R'},   {Channel::MODE_DELJOINS, 'D'},
+        {Channel::MODE_NOCOLOR, 'c'},    {Channel::MODE_NOCTCP, 'C'},       {Channel::MODE_NOPARTMSGS, 'u'},
+        {Channel::MODE_MODERATENOREG, 'M'}, {Channel::MODE_TLSONLY, 'Z'},
+    };
+
+    string letters;
+    for (const auto& m : chanModes) {
+        if (theChan->getMode(m.bit)) {
+            letters += m.letter;
+        }
+    }
+
+    string args;
+    if (theChan->getMode(Channel::MODE_KEY)) {
+        letters += 'k';
+        args += " " + theChan->getKey();
+    }
+    if (theChan->getMode(Channel::MODE_LIMIT)) {
+        letters += 'l';
+        args += " " + std::to_string(theChan->getLimit());
+    }
+    if (theChan->getMode(Channel::MODE_APASS)) {
+        letters += 'A';
+    }
+    if (theChan->getMode(Channel::MODE_UPASS)) {
+        letters += 'U';
+    }
+
+    return letters.empty() ? string("none") : "+" + letters + args;
 }
 
 void spybot::rawMode(const string& src, const StringTokenizer& st, bool opmode) {
@@ -512,7 +607,9 @@ void spybot::rawMode(const string& src, const StringTokenizer& st, bool opmode) 
             iClient* argClient = (5 == st[i].size()) ? Network->findClient(st[i]) : 0;
             modes += " " + (argClient ? argClient->getNickName() : st[i]);
         }
-        report(describeSource(src) + label + target + " " + modes);
+        const string summary = channelModeSummary(target);
+        report(describeSource(src) + label + cChan(target) + " " + cModes(modes) +
+               (summary.empty() ? string() : " (" + cModes(summary) + ")"));
         return;
     }
 
@@ -523,7 +620,9 @@ void spybot::rawMode(const string& src, const StringTokenizer& st, bool opmode) 
 
     const string modes = tail(st, 3);
     const bool self = targetClient && src == targetClient->getCharYYXXX();
-    report(describeSource(src) + label + modes + (self ? string() : " (on " + target + ")"));
+    const string summary = targetClient ? " (" + cModes(userModeSummary(targetClient)) + ")" : string();
+    report(describeSource(src) + label + cModes(modes) + (self ? string() : " (on " + cNick(target) + ")") +
+           summary);
 }
 
 /* ------------------------------------------------------------------ */

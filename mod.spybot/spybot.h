@@ -41,9 +41,16 @@ class spybot : public xClient {
     void handleRawOut(const std::string&);
 
     // mIRC colours, plain text when colours are disabled
-    std::string colour(const char* code, const std::string&) const;
-    std::string orange(const std::string& s) const { return colour("07", s); }
-    std::string yellow(const std::string& s) const { return colour("08", s); }
+    std::string colour(const std::string& code, const std::string&) const;
+    std::string cNick(const std::string& s) const { return colour(colNick, s); }
+    std::string cUserHost(const std::string& s) const { return colour(colUserHost, s); }
+    std::string cIp(const std::string& s) const { return colour(colIp, s); }
+    std::string cChan(const std::string& s) const { return colour(colChannel, s); }
+    std::string cServer(const std::string& s) const { return colour(colServer, s); }
+    std::string cModes(const std::string& s) const { return colour(colModes, s); }
+
+    // "7", "07" or "4,2" (fg,bg) become a two digit mIRC code; none/empty gives ""
+    static std::string parseColour(const std::string& value, const std::string& fallback);
 
     // Network event handlers
     void handleConnect(iClient*);
@@ -61,6 +68,10 @@ class spybot : public xClient {
     void rawKick(const std::string& src, const StringTokenizer&);
     void rawTopic(const std::string& src, const StringTokenizer&);
     void rawMode(const std::string& src, const StringTokenizer&, bool opmode);
+
+    // Current modes after a change, e.g. "+ix" or "+tnsk key"
+    std::string userModeSummary(const iClient*) const;
+    std::string channelModeSummary(const std::string& channelName) const;
 
     // Describing and matching
     std::string describeSource(const std::string& numeric) const;
@@ -90,6 +101,7 @@ class spybot : public xClient {
     std::string ignoreFile;
     std::string debugChanName;
     bool useColours;
+    std::string colNick, colUserHost, colIp, colChannel, colServer, colModes;
     bool debugEnabled;
 
     // P10/P11 command tokens that are left out of the debug channel

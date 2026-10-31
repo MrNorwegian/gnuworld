@@ -1,0 +1,50 @@
+mod.spybot
+==========
+
+spybot is a gnuworld client that watches the P10/P11 traffic its server sees
+and reports it to an admin channel.  It does not scan or act on anything, it
+only reports.
+
+Reported to the admin channel (`adminchan`):
+
+  * client connect, quit (with reason), kill, nick change
+  * join, create, part, kick, topic
+  * user mode and channel mode changes (OPMODE too), followed by the modes
+    that are set afterwards, e.g. `sets mode: -i (+x)` or
+    `sets mode: #chan +k key (+tnsk key)`.  Channel keys and limits are
+    shown, A/U passes are only listed as letters.
+  * server links and splits (squit), G-line set and removal
+
+Nick, ident@host, IP, channel, server and modes each have their own colour
+(`colour_nick`, `colour_userhost`, `colour_ip`, `colour_channel`,
+`colour_server`, `colour_modes`; a mIRC colour 0-15, `fg,bg`, or `none`).
+`colours = no` turns all colours off.
+
+Debug channel
+-------------
+With `debugchan` set, every raw line read from or written to the uplink is
+logged there as `[Sockread Server] -->` / `[Sockwrite Server] <--`.  Outgoing
+lines come from the core event EVT_RAW_OUT (posted by xServer::writeLine), so
+everything gnuworld sends is included, not just spybot's own output.
+`debugignore` lists the P10/P11 commands left out (default `RI RO Z G`).
+`/msg spybot DEBUG ON|OFF` toggles it at runtime.
+
+Commands (IRC operators only, /msg spybot)
+------------------------------------------
+  IGNORE <server|client|channel> <mask>
+  UNIGNORE <server|client|channel> <mask>
+  LIST IGNORES [server|client|channel]
+  DEBUG [ON|OFF]
+
+Masks use wildcards.  Client masks are nick!user@host (host may be an IP);
+a bare nick or user@host is expanded.  Ignoring a server also ignores its
+clients.  Ignores are saved to `ignorefile` and loaded on startup.
+
+Configuration
+-------------
+See bin/spybot.example.conf.  Config files must use LF line endings.
+
+Build
+-----
+Enable with `./configure --enable-modules=...,spybot`, then load libspybot.
+Needs EVT_RAW_OUT in include/events.h and src/server_connection.cc.
