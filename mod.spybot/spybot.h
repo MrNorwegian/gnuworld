@@ -66,6 +66,7 @@ class spybot : public xClient {
     void rawJoin(const std::string& src, const StringTokenizer&, bool create);
     void rawPart(const std::string& src, const StringTokenizer&);
     void rawKick(const std::string& src, const StringTokenizer&);
+    void rawAccount(const StringTokenizer& st);
     void rawTopic(const std::string& src, const StringTokenizer&);
     void rawMode(const std::string& src, const StringTokenizer&, bool opmode);
 

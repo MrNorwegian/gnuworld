@@ -255,7 +255,8 @@ bool MODECommand::Exec(iClient* theClient, const string& Message) {
             break;
         case 'u': // No part messages
         case 'M': // Moderated for unauthenticated users
-            // P11 has these two; a P10 uplink does not know them
+        case 'Z': // TLS only clients
+            // P11 has these three modes; a P10 uplink does not know them
             if (bot->getUplink()->getUplink()->getProtocol() < 11)
                 break;
             modeString += st[2][charPos];
@@ -264,6 +265,7 @@ bool MODECommand::Exec(iClient* theClient, const string& Message) {
 
             modeString += st[2][charPos];
             break;
+
         case '+':
             if (plus) {
                 modeString += st[2][charPos];

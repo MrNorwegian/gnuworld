@@ -461,7 +461,24 @@ void spybot::handleRaw(const string& rawLine) {
         rawMode(src, st, false);
     } else if ("OM" == token) {
         rawMode(src, st, true);
+    } else if ("AC" == token) {
+        rawAccount(st);
     }
+}
+
+void spybot::rawAccount(const StringTokenizer& st) {
+    // <server> AC <user numeric> <account>[:<timestamp>[:<flags>]]
+    if (st.size() < 4 || isSourceIgnored(st[2])) {
+        return;
+    }
+
+    string account = st[3];
+    const string::size_type colon = account.find(':');
+    if (string::npos != colon) {
+        account.erase(colon);
+    }
+
+    report(describeSource(st[2]) + " authenticated: " + account);
 }
 
 void spybot::rawJoin(const string& src, const StringTokenizer& st, bool create) {
