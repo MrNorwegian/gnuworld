@@ -68,6 +68,11 @@ spybot::spybot(const string& configFileName)
             token += static_cast<char>(::toupper(static_cast<unsigned char>(ch)));
         }
     }
+    allowOpers = conf.TryRequire<bool>("allow_opers", true);
+    for (EConfig::const_iterator it = conf.Find("permit_user"); it != conf.end() && it->first == "permit_user"; ++it) {
+        permittedUsers.push_back(it->second);
+    }
+
     useColours = (string_lower(conf.TryRequire<string>("colours", string("yes"))) != "no");
     colNick = parseColour(conf.TryRequire<string>("colour_nick", string("07")), "07");
     colUserHost = parseColour(conf.TryRequire<string>("colour_userhost", string("07")), "07");
@@ -98,9 +103,9 @@ void spybot::OnAttach() {
 void spybot::BurstChannels() {
     xClient::BurstChannels();
 
-    Join(adminChanName);
+    Join(adminChanName, string(), 0, true);
     if (!debugChanName.empty() && 0 != strcasecmp(debugChanName.c_str(), adminChanName.c_str())) {
-        Join(debugChanName);
+        Join(debugChanName, string(), 0, true);
     }
 }
 
@@ -238,8 +243,8 @@ string spybot::serverNameOf(const iClient* theClient) const {
 }
 
 string spybot::describeClient(const iClient* theClient) const {
-    const string& host = theClient->getRealInsecureHost().empty() ? theClient->getInsecureHost()
-                                                                  : theClient->getRealInsecureHost();
+    const string& host = theClient->getInsecureHost().empty() ? theClient->getRealInsecureHost()
+                                                              : theClient->getInsecureHost();
     return "User " + cNick(theClient->getNickName()) + " (" + cUserHost(theClient->getUserName() + "@" + host) +
            ") [" + cIp(xIP(theClient->getIP()).GetNumericIP()) + "]";
 }
@@ -647,8 +652,11 @@ void spybot::rawMode(const string& src, const StringTokenizer& st, bool opmode) 
 /* ------------------------------------------------------------------ */
 
 void spybot::OnPrivateMessage(iClient* theClient, const string& message, bool) {
-    if (!theClient->isOper()) {
-        Notice(theClient, string("Access denied"));
+    bool userHasAccess = hasAccess(theClient->getAccount());
+    if (!userHasAccess && !theClient->isOper()) {
+        return;
+    }
+    if (!userHasAccess && !allowOpers) {
         return;
     }
 
@@ -802,6 +810,16 @@ void spybot::cmdList(iClient* theClient, const StringTokenizer& st) {
 /* ------------------------------------------------------------------ */
 /* Persistence                                                         */
 /* ------------------------------------------------------------------ */
+
+bool spybot::hasAccess(const string& accountName) const {
+    if (accountName.empty()) return false;
+    for (const string& user : permittedUsers) {
+        if (!strcasecmp(accountName.c_str(), user.c_str())) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void spybot::loadIgnores() {
     std::ifstream in(ignoreFile.c_str());

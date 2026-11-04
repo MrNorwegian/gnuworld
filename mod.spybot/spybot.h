@@ -95,8 +95,13 @@ class spybot : public xClient {
     static bool parseType(const std::string&, IgnoreType&);
     static const char* typeName(IgnoreType);
 
+    bool hasAccess(const std::string& accountName) const;
+
     void loadIgnores();
     void saveIgnores() const;
+
+    bool allowOpers;
+    std::vector<std::string> permittedUsers;
 
     std::string adminChanName;
     std::string ignoreFile;

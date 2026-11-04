@@ -235,6 +235,10 @@ if COND_MODSPYBOT
 include $(srcdir)/mod.spybot/Makefile.am
 endif
 
+if COND_MODPROXYSCAN
+include $(srcdir)/mod.proxyscan/Makefile.am
+endif
+
 if COND_TESTDIR
 include $(srcdir)/test/Makefile.am
 endif
